@@ -24,9 +24,10 @@ void countdown_timer(GPIO_TypeDef* gpio, int DIN, int CS, int CLK,uint16_t keypa
 					}
 					last=counter_timer->CNT;
 					double now_time=sec;
-					display_number(gpio, DIN,CS,CLK,sec,2);
+					display_number(gpio, DIN,CS,CLK,sec,num_digits(sec));
 					if(now_time==0){
-
+						music_play();
+						second_dis(gpio, DIN,CS,CLK,sec,1);
 						break;
 					}
 				}
@@ -35,29 +36,46 @@ void countdown_timer(GPIO_TypeDef* gpio, int DIN, int CS, int CLK,uint16_t keypa
 	}
 }
 
-void music_Play(int note){
-	TIM2->ARR = note_Arr[note - 1];
-	TIM2->CCR1 = (note_Arr[note - 1]*music_Duty_Cycle)/100;
+void music_play(){
+	timer_enable(TIM2);
+	timer_init(TIM2, 20, 200000/300);
 
 	timer_start(TIM2);
-
-	return;
 }
+int last_num=0,display_num=-1,round=0;
+
+int second_dis(GPIO_TypeDef* gpio, int DIN, int CS, int CLK,uint16_t keypad_Input, int reset){
+	if(reset & 1){
+		display_num=0;
+	}
+	if(keypad_Input<0.0 || keypad_Input>1000.0){
+			display_number(gpio, DIN,CS,CLK,0,2);}
+	if(!(keypad_Input==last_num)){
+		if(display_num<=0){
+			 display_num = keypad_Input;
+			 display_number(gpio, DIN,CS,CLK, display_num,1);
+		}
+		else if(display_num>0){
+			 display_num = (display_num *10 + keypad_Input);
+			 display_number(gpio,DIN,CS,CLK,display_num,num_digits(display_num));
+			 last_num=keypad_Input;
+		}
+		round++;
+	 }
+	return display_num;
+	}
+
 
 void music_Init(){
 
-	// Timer_PWM_Init_Data timer_PWM_Data = {
-			// .channel = 1,
-			//.PSC = (40 - 1),
-			//.ARR = 100,
-			//.CCRx = 50,
-//	};
-
-	timer_enable(TIM2);
-	PWM_channel_init();
-	GPIO_init_AF();              //PA0
-	timer_reload(TIM2);
-	timer_start(TIM2);
+	//Change PA0 to AF mode-use for PWM
+		GPIO_init_AF();
+		//enable timer
+		timer_enable(TIM2);
+		//Init the timer
+		timer_init(TIM2, 20, 200000);
+		PWM_channel_init();
+		timer_start(TIM2);
 
 	return;
 }
@@ -91,7 +109,7 @@ void EXTI_Setup(){
 
 	//user button
 	SYSCFG->EXTICR[3] &= ~SYSCFG_EXTICR4_EXTI13_Msk;
-	SYSCFG->EXTICR[3] |= (1 << SYSCFG_EXTICR4_EXTI13_Pos);
+	SYSCFG->EXTICR[3] |= (0b010 << SYSCFG_EXTICR4_EXTI13_Pos);
 	EXTI->IMR1 |= EXTI_IMR1_IM13;	//0b001<<13
 	EXTI->FTSR1 |= EXTI_FTSR1_FT13;	//0b001<<13
 	NVIC_EnableIRQ(EXTI15_10_IRQn);
@@ -104,5 +122,3 @@ void EXTI_Setup(){
 	NVIC_SetPriority(EXTI9_5_IRQn,2);
 
 }
-
-

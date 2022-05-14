@@ -43,6 +43,18 @@ void music_Play(int note){
 
 	return;
 }
+int last_num=0;
+
+void second_dis(GPIO_TypeDef* gpio, int DIN, int CS, int CLK,uint16_t keypad_Input){
+	if(!(keypad_Input==last_num)&&keypad_Input!=100){
+		 if(display_num!=0){
+			 display_num = (display_num << 1) | keyValue;
+		 }
+		 else
+			 display_num =  keyValue;
+		 display_number(gpio,  DIN,CS,CLK,display_num,2);
+	 }
+	}
 
 void music_Init(){
 
